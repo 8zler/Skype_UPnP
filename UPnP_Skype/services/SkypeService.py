@@ -8,7 +8,6 @@ from pyupnp.upnp import UPnP
 import os,time,threading,alsaaudio,subprocess
 from callManager import CallManager
 from volumeManager import VolumeManager
-from autoanswerclass import SkypeAPI
 
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
@@ -24,6 +23,18 @@ def read_file(file):
                 res+=line[:-1]+";"
         res=res[:-1]
         return res
+
+def delOneUser(fileName,nickname):
+        data = read_file(fileName).split(";")
+        data.remove(nickname)
+        f = open(fileName,"w")
+        f.write("\n".join(data))
+
+def addOneUser(fileName,nickname):
+        f = open(fileName,"a")
+        f.write(nickname+"\n")
+        f.close()
+        
 
 def isIn(allAccount,account):
         print allAccount
@@ -70,6 +81,12 @@ class SkypeCallingManager(Service):
                 'sendMessage': [
 			ServiceActionArgument('nickname','in','nickname'),
                         ServiceActionArgument('content','in','content')
+		],
+                'deleteUsersPendingAuthorisation': [
+			ServiceActionArgument('nickname','in','nickname')
+		],
+                'endCall': [
+			ServiceActionArgument('run','in','run')
 		]
 	}
 	
@@ -80,14 +97,16 @@ class SkypeCallingManager(Service):
                 ServiceStateVariable('allUsers_ret','string',sendEvents=True),
                 ServiceStateVariable('run','boolean',sendEvents=True),
                 ServiceStateVariable('allUsersPendingAuthorisation','string',sendEvents=True),
-                ServiceStateVariable('content','string',sendEvents=True)
+                ServiceStateVariable('content','string',sendEvents=True),
+                ServiceStateVariable('status','boolean',sendEvents=True)
                 
 
 	]
 	
 		
 	nick=EventProperty('nickname')
-	allUsers=EventProperty('allUsersAuthorized',read_file("/home/heitzler/PFE/autorized_person.txt"))
+	allUsersAuthorized=EventProperty('allUsersAuthorized',read_file("/home/heitzler/PFE/autorized_person.txt"))
+	fdp=EventProperty('allUsersPendingAuthorisation')#,read_file("/home/heitzler/PFE/pending_authorisation.txt"))
         callMan = CallManager()
         proc = None
         isAutoLunched = False
@@ -96,9 +115,7 @@ class SkypeCallingManager(Service):
 	@register_action('addAuthorizedUser')
 	def add(self,arg):
                 print "in addAuthorizedUser"
-                self.f = open("/home/heitzler/PFE/autorized_person.txt","a")
-                self.f.write(str(arg)+"\n")
-                self.f.close()
+                addOneUser("/home/heitzler/PFE/autorized_person.txt",arg)
                 print str(arg)+" written in file"
 
         @register_action('getAuthorizedUser')
@@ -111,13 +128,7 @@ class SkypeCallingManager(Service):
         @register_action('deleteAuthorizedUser')
 	def delete(self,arg):
                 print "in deleteAuthorizedUser"
-                self.data=read_file("/home/heitzler/PFE/autorized_person.txt").split(";")
-                if arg in self.data:
-                        self.data.remove(arg)
-                        self.f=open("/home/heitzler/PFE/autorized_person.txt","w")
-                        self.f.write(";".join(self.data))
-                        self.f.close()
-                        print "user deleted" 
+                delOneUser("/home/heitzler/PFE/autorized_person.txt",arg)
                 
         @register_action('holdCall')
 	def hold(self,arg):
@@ -131,8 +142,14 @@ class SkypeCallingManager(Service):
                 self.callMan.resumecall()
 
 
+        @register_action('endCall')
+	def end(self,arg):
+                print "in endCall"
+                self.callMan.endCall()
+
+
         @register_action('addFriend')
-	def add(self,arg):
+	def addFriend(self,arg):
                 print "in addFriend"
                 self.callMan.addFriend(arg)
 
@@ -144,23 +161,22 @@ class SkypeCallingManager(Service):
                         'allUsersPendingAuthorisation':"user1\nuser2\n"#read_file("/home/heitzler/PFE/pending_authorisation.txt")
                         }
 
-
-
         @register_action('addUsersPendingAuthorisation')
 	def setPending(self,arg):
                 print "in addUsersPendingAuthorisation"
-                self.f = open("/home/heitzler/PFE/pending_authorisation.txt","a")
-                self.f.write(str(arg)+"\n")
-                self.f.close()
+                addOneUser("/home/heitzler/PFE/pending_authorisation.txt",arg)
                 print str(arg)+" written in file"
+
+        @register_action('deleteUsersPendingAuthorisation')
+	def delPending(self,arg):
+                print "in deleteUsersPendingAuthorisation"
+                delOneUser("/home/heitzler/PFE/pending_authorisation.txt",arg)                
 
 
         @register_action('sendMessage')
 	def sendMessage(self,nick,content):
                 print "in sendMessage"
-                self.callMan.sendMessage(nick,content)
-        
-                
+                self.callMan.sendMessage(nick,content)            
                 
 
 
@@ -175,5 +191,41 @@ class SkypeCallingManager(Service):
                 elif self.isAutoLunched:
                         self.proc.terminate()
                         self.isAutoLunched = False
+
+
+
+
+
+
+
+##        def refreshListPending(self,s):
+##                print "refreshing pending auth users"
+##                self.i = 0
+##                time.sleep(5)
+##		while True:
+##                        try:
+##                                time.sleep(1)
+##                                self.data = read_file("/home/heitzler/PFE/pending_authorisation.txt")
+##                                self.fdp =read_file("/home/heitzler/PFE/pending_authorisation.txt")
+##                                self.i += 1
+##                                print "list refreshed"
+##                        except IOError as e:
+##                                print "erreur sa mere"
+##		
+##		
+##	def startRefreshing(self):	
+##		self.thread = threading.Thread(target=SkypeCallingManager.refreshListPending, args = (self,0))
+##		self.thread.daemon = True
+##		self.thread.start();
+##		return {
+##                        'allUsersPendingAuthorisation':'begin'
+##                        }
+##                        
+
+
+
+
+
+
 
 

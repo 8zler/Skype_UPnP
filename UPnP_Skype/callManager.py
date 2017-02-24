@@ -54,6 +54,49 @@ class CallManager:
 
 
 
+    def endCall(self):
+        if os.name == "nt":
+            skype = Skype4Py.Skype()
+        else:
+            skype = Skype4Py.Skype(Transport='x11')
+        try:
+            skype.Attach()
+        except Skype4Py.errors.SkypeAPIError:
+            print "could not attach, are you logged in?"
+        calls = skype.ActiveCalls
+        for call in calls:
+            call.Finish()
+
+
+
+    def changeStatus(self):
+        if os.name == "nt":
+            skype = Skype4Py.Skype()
+        else:
+            skype = Skype4Py.Skype(Transport='x11')
+        try:
+            skype.Attach()
+        except Skype4Py.errors.SkypeAPIError:
+            print "could not attach, are you logged in?"
+        user = skype.User("genox212")
+        skype._SetCurrentUserStatus(Skype4Py.cusAway)
+
+
+
+    def changeDisplayName(self,newNickname):
+        if os.name == "nt":
+            skype = Skype4Py.Skype()
+        else:
+            skype = Skype4Py.Skype(Transport='x11')
+        try:
+            skype.Attach()
+        except Skype4Py.errors.SkypeAPIError:
+            print "could not attach, are you logged in?"
+        user1 = skype._GetCurrentUserProfile()
+        user1._SetFullName(newNickname)
+
+
+
     def sendMessage(self,nickname,content):
         if os.name == "nt":
             skype = Skype4Py.Skype()

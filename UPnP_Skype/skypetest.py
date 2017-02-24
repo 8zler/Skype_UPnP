@@ -32,6 +32,8 @@ class RobotDevice(Device):
             self.volum
         ]
 
+        #self.skype.startRefreshing()
+
         
         self.icons = [DeviceIcon('image/png', 32, 32, 24,'./hiboo.png')]
 

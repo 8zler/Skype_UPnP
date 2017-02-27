@@ -17,23 +17,32 @@ os.system('modprobe w1-therm')
 
 def read_file(file):
         f = open(file,"r")
-        lines = f.readlines()
-        res=""
-        for line in lines:
-                res+=line[:-1]+";"
-        res=res[:-1]
-        return res
+        lines = f.read()
+        lines = lines[:-1]
+        res=lines.split(";")
+        print ";".join(res)
+        return ";".join(res)
 
 def delOneUser(fileName,nickname):
-        data = read_file(fileName).split(";")
-        data.remove(nickname)
-        f = open(fileName,"w")
-        f.write("\n".join(data))
+        if len(nickname) > 0:
+                data = read_file(fileName).split(";")
+                print "in del user"
+##                print data
+##                print "user=|"+nickname+"|"
+                if nickname in data:
+                        data.remove(nickname)
+                        f=open(fileName,"w")
+                        for elt in data:
+                                f.write(elt+";")
+                        f.close()
 
 def addOneUser(fileName,nickname):
-        f = open(fileName,"a")
-        f.write(nickname+"\n")
-        f.close()
+        if len(nickname) > 0:                
+                f = open(fileName,"a")
+                data = read_file(fileName).split(";")
+                if nickname not in data:
+                        f.write(nickname+";")
+                        f.close()
         
 
 def isIn(allAccount,account):
@@ -105,8 +114,8 @@ class SkypeCallingManager(Service):
 	
 		
 	nick=EventProperty('nickname')
-	allUsersAuthorized=EventProperty('allUsersAuthorized',read_file("/home/heitzler/PFE/autorized_person.txt"))
-	fdp=EventProperty('allUsersPendingAuthorisation')#,read_file("/home/heitzler/PFE/pending_authorisation.txt"))
+	allUsersAuthorized=EventProperty('allUsersAuthorized',read_file("/home/heitzler/PFE/authorized_person.txt"))
+	fdp=EventProperty('allUsersPendingAuthorisation')#read_file("/home/heitzler/PFE/pending_authorisation.txt"))
         callMan = CallManager()
         proc = None
         isAutoLunched = False
@@ -115,20 +124,20 @@ class SkypeCallingManager(Service):
 	@register_action('addAuthorizedUser')
 	def add(self,arg):
                 print "in addAuthorizedUser"
-                addOneUser("/home/heitzler/PFE/autorized_person.txt",arg)
+                addOneUser("/home/heitzler/PFE/authorized_person.txt",arg)
                 print str(arg)+" written in file"
 
         @register_action('getAuthorizedUser')
 	def get(self):
                 print "in getAuthorizedUser"
                 return {
-                        'allUsers_ret':read_file("/home/heitzler/PFE/autorized_person.txt")
+                        'allUsers_ret':read_file("/home/heitzler/PFE/authorized_person.txt")
                         }
 
         @register_action('deleteAuthorizedUser')
 	def delete(self,arg):
                 print "in deleteAuthorizedUser"
-                delOneUser("/home/heitzler/PFE/autorized_person.txt",arg)
+                delOneUser("/home/heitzler/PFE/authorized_person.txt",arg)
                 
         @register_action('holdCall')
 	def hold(self,arg):
@@ -158,7 +167,7 @@ class SkypeCallingManager(Service):
 	def getPending(self):
                 print "in getUsersPendingAuthorisation"
                 return {
-                        'allUsersPendingAuthorisation':"user1\nuser2\n"#read_file("/home/heitzler/PFE/pending_authorisation.txt")
+                        'allUsersPendingAuthorisation':read_file("/home/heitzler/PFE/pending_authorisation.txt")
                         }
 
         @register_action('addUsersPendingAuthorisation')
@@ -170,6 +179,7 @@ class SkypeCallingManager(Service):
         @register_action('deleteUsersPendingAuthorisation')
 	def delPending(self,arg):
                 print "in deleteUsersPendingAuthorisation"
+                print "user=|"+arg+"|"
                 delOneUser("/home/heitzler/PFE/pending_authorisation.txt",arg)                
 
 
@@ -195,9 +205,9 @@ class SkypeCallingManager(Service):
 
 
 
-
-
-
+##
+##
+##
 ##        def refreshListPending(self,s):
 ##                print "refreshing pending auth users"
 ##                self.i = 0
@@ -221,7 +231,7 @@ class SkypeCallingManager(Service):
 ##                        'allUsersPendingAuthorisation':'begin'
 ##                        }
 ##                        
-
+##
 
 
 

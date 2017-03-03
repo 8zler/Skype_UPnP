@@ -4,68 +4,52 @@ sys.path.append('./modules')
 import time
 import Skype4Py
 
-#Will segfault if Transoprt='x11' isn't there
 if os.name == "nt":
 	skype = Skype4Py.Skype()
 else:
 	skype = Skype4Py.Skype(Transport='x11')
 
-#global cmdLine variable. So far is only used for adding people to the auto-answer list
 cmdLine = ""
 
-##call = skype.PlaceCall("sherif.meimari1","randa.nasreldin")
-##time.sleep(5)
-##call.StartVideoSend()
 
 
-def getUserAuthorized(fileName):
-        f = open(fileName,"r")
-        lines = f.readlines()
-        res=""
-        for line in lines:
-                res+=line[:-1]+";"
-        res=res[:-1]
-        return res
+def getUserAuthorized(file):
+        f = open(file,"r")
+        lines = f.read()
+        lines = lines[:-1]
+        res=lines.split(";")
+        if res[-1] == '' or res[-1] == ';' or res[-1] == '\n':
+                return ";".join(res)[:-1]
+        return ";".join(res)
+
 
 def addToUserPending(fileName,nickname):
-        f = open(fileName,"a")
-        f.write(nickname+"\n")
-        f.close()
+        if len(nickname) > 0:                
+                f = open(fileName,"a")
+                data = getUserAuthorized(fileName).split(";")
+                if nickname not in data:
+                        f.write(nickname+";")
+                        f.close()
+
+
+
 
 
 def init():
-##	global cmdLine
-##	cmdLine = sys.argv
-##	print 'args: ' + str(len(cmdLine))
-##
-##	#if no contact is specified
-##	if len(cmdLine) < 2:
-##		print 'Usage: python AutoAnswer.py [user] [user2] [user3] etc...'
-##		sys.exit()
-
-	#Connect the Skype object to the Skype client.
 	try:
 		skype.Attach()
 	except Skype4Py.errors.SkypeAPIError:
-		print "could not attach, are you logged in?"
-	
+		print "could not attach, are you logged in?"	
 	#run these functions when these things happen
 	skype.OnCallStatus = onCall
 	skype.OnUserAuthorizationRequestReceived = acceptFriend
-##	for user in skype.UsersWaitingAuthorization:
-##                print "User: " + user.Handle + " " + str(user.BuddyStatus)
-##                if user.BuddyStatus == 1:
-##                        print "User: " + user.Handle + " " + str(user.BuddyStatus)
-##                        user.BuddyStatus = 2
-		
-#converts skype call status to readable text
 def callStatusText(status):
 	return skype.Convert.CallStatusToText(status)
 
 def acceptFriend(user):
-        print "demande recu"
+        print "demande receive"
         user._SetIsAuthorized(1)
-        print "demande accepteyyy"
+        print "demande accepted"
 
 #Runs when call status changes
 def onCall(call, status):
@@ -78,10 +62,9 @@ def onCall(call, status):
                 skype.SendMessage(calls[1].PartnerHandle,"Sorry this teleprense BOT is already in use.")
                 calls[1].Finish()
                 print "but the call is refused"
-	callStatus = status
-	#print 'Call status: ' + callStatusText(status)	
+	callStatus = status	
 	if callStatusText(status) == "Calling":
-		if call.PartnerHandle in getUserAuthorized("/home/heitzler/PFE/autorized_person.txt").split(";"):
+		if call.PartnerHandle in getUserAuthorized("/home/heitzler/PFE/authorized_person.txt").split(";"):
 			call.Answer()
 			print "and we respond to the call"
 		else:
@@ -90,8 +73,6 @@ def onCall(call, status):
 			addToUserPending("/home/heitzler/PFE/pending_authorisation.txt",call.PartnerHandle)
 	elif callStatusText(status) == "Call in Progress":
                 call.StartVideoSend()
-##        elif callStatusText(status) == "Finished" or callStatusText(status) == "Refused":
-##                os._exit(0)
 
 def main():
 

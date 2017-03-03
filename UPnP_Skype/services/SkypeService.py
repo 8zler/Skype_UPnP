@@ -20,7 +20,8 @@ def read_file(file):
         lines = f.read()
         lines = lines[:-1]
         res=lines.split(";")
-        print ";".join(res)
+        if res[-1] == '' or res[-1] == ';':
+                return ";".join(res)[:-1]
         return ";".join(res)
 
 def delOneUser(fileName,nickname):
@@ -64,7 +65,7 @@ class SkypeCallingManager(Service):
 			ServiceActionArgument('nickname','in','nickname')
 		],
                 'getAuthorizedUser': [
-			ServiceActionArgument('allUsers_ret','out','allUsers_ret')
+			ServiceActionArgument('allUsersAuthorized','out','allUsersAuthorized')
 		],
                 'deleteAuthorizedUser': [
 			ServiceActionArgument('nickname','in','nickname')
@@ -72,10 +73,7 @@ class SkypeCallingManager(Service):
                 'runAutoAcceptAndAnswer': [
 			ServiceActionArgument('run','in','run')
 		],
-                'holdCall': [
-			ServiceActionArgument('run','in','run')
-		],
-                'resumeCall': [
+                'holdResumeCall': [
 			ServiceActionArgument('run','in','run')
 		],
                 'addFriend': [
@@ -96,6 +94,21 @@ class SkypeCallingManager(Service):
 		],
                 'endCall': [
 			ServiceActionArgument('run','in','run')
+		],
+                'getStatus': [
+			ServiceActionArgument('status','out','status')
+		],
+                'setStatus': [
+			ServiceActionArgument('status','in','status')
+		],
+                'setName': [
+			ServiceActionArgument('nickname','in','nickname')
+		],
+                'delFriend': [
+			ServiceActionArgument('nickname','in','nickname')
+		],
+                'getFriend': [
+			ServiceActionArgument('friendlist','out','friendlist')
 		]
 	}
 	
@@ -103,19 +116,21 @@ class SkypeCallingManager(Service):
 		# Variables
 		ServiceStateVariable('nickname','string',sendEvents=True),
 		ServiceStateVariable('allUsersAuthorized','string',sendEvents=True),
-                ServiceStateVariable('allUsers_ret','string',sendEvents=True),
                 ServiceStateVariable('run','boolean',sendEvents=True),
                 ServiceStateVariable('allUsersPendingAuthorisation','string',sendEvents=True),
                 ServiceStateVariable('content','string',sendEvents=True),
-                ServiceStateVariable('status','boolean',sendEvents=True)
+                ServiceStateVariable('status','boolean',sendEvents=True),
+                ServiceStateVariable('friendlist','string',sendEvents=True)
                 
 
 	]
 	
 		
 	nick=EventProperty('nickname')
-	allUsersAuthorized=EventProperty('allUsersAuthorized',read_file("/home/heitzler/PFE/authorized_person.txt"))
+	stat = EventProperty('status',False)
+	allUsersAuthorized=EventProperty('allUsersAuthorized')#,read_file("/home/heitzler/PFE/authorized_person.txt"))
 	fdp=EventProperty('allUsersPendingAuthorisation')#read_file("/home/heitzler/PFE/pending_authorisation.txt"))
+	FL=EventProperty("friendlist")
         callMan = CallManager()
         proc = None
         isAutoLunched = False
@@ -128,27 +143,21 @@ class SkypeCallingManager(Service):
                 print str(arg)+" written in file"
 
         @register_action('getAuthorizedUser')
-	def get(self):
+	def authUser(self):
                 print "in getAuthorizedUser"
                 return {
-                        'allUsers_ret':read_file("/home/heitzler/PFE/authorized_person.txt")
+                        'allUsersAuthorized':read_file("/home/heitzler/PFE/authorized_person.txt")
                         }
 
         @register_action('deleteAuthorizedUser')
 	def delete(self,arg):
-                print "in deleteAuthorizedUser"
+                print "in deleteAuthorizedUser "+arg+" deleted"
                 delOneUser("/home/heitzler/PFE/authorized_person.txt",arg)
                 
-        @register_action('holdCall')
+        @register_action('holdResumeCall')
 	def hold(self,arg):
                 print "in holdCall"
-                self.callMan.holdcall()
-                
-
-        @register_action('resumeCall')
-	def resume(self,arg):
-                print "in resumeCall"
-                self.callMan.resumecall()
+                self.callMan.holdResumeCall()
 
 
         @register_action('endCall')
@@ -178,7 +187,7 @@ class SkypeCallingManager(Service):
 
         @register_action('deleteUsersPendingAuthorisation')
 	def delPending(self,arg):
-                print "in deleteUsersPendingAuthorisation"
+                print "in deleteUsersPendingAuthorisation "+arg+" deleted"
                 print "user=|"+arg+"|"
                 delOneUser("/home/heitzler/PFE/pending_authorisation.txt",arg)                
 
@@ -187,7 +196,41 @@ class SkypeCallingManager(Service):
 	def sendMessage(self,nick,content):
                 print "in sendMessage"
                 self.callMan.sendMessage(nick,content)            
-                
+
+
+
+        
+        @register_action('getStatus')
+	def getStatus(self):
+                print "in getStatus"
+                print self.callMan.getStatus()
+                return {
+                        'status':self.callMan.getStatus()
+                        }
+
+
+        @register_action('setStatus')
+	def setStatus(self,arg):
+                self.callMan.setStatus(bool(int(arg)))
+
+
+        @register_action('setName')
+	def setName(self,arg):
+                self.callMan.changeDisplayName(arg)
+
+
+        @register_action('delFriend')
+	def delFriend(self,arg):
+                print "in delFriend "+arg+" deleted "
+                self.callMan.delFriend(arg)
+
+
+        @register_action('getFriend')
+	def getFriend(self):
+                print "in getFriend"
+                return {
+                        'friendlist':self.callMan.getAllFriend()
+                        }
 
 
                 
@@ -203,35 +246,8 @@ class SkypeCallingManager(Service):
                         self.isAutoLunched = False
 
 
+                        
 
-
-##
-##
-##
-##        def refreshListPending(self,s):
-##                print "refreshing pending auth users"
-##                self.i = 0
-##                time.sleep(5)
-##		while True:
-##                        try:
-##                                time.sleep(1)
-##                                self.data = read_file("/home/heitzler/PFE/pending_authorisation.txt")
-##                                self.fdp =read_file("/home/heitzler/PFE/pending_authorisation.txt")
-##                                self.i += 1
-##                                print "list refreshed"
-##                        except IOError as e:
-##                                print "erreur sa mere"
-##		
-##		
-##	def startRefreshing(self):	
-##		self.thread = threading.Thread(target=SkypeCallingManager.refreshListPending, args = (self,0))
-##		self.thread.daemon = True
-##		self.thread.start();
-##		return {
-##                        'allUsersPendingAuthorisation':'begin'
-##                        }
-##                        
-##
 
 
 

@@ -7,6 +7,7 @@ from pyupnp.ssdp import SSDP
 from pyupnp.upnp import UPnP
 import os,time,threading,alsaaudio
 from volumeManager import VolumeManager
+from callManager import CallManager
 
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
@@ -28,19 +29,24 @@ class VolumeManager(Service):
 		],
                 'getMicVolume': [
 			ServiceActionArgument('volume_out','out','volume_out')
+		],
+                'muteUnmuteMic': [
+			ServiceActionArgument('muting','in','muting')
 		]
 	}
 	
 	stateVariables = [
 		# Variables
                 ServiceStateVariable('volume_in','string',sendEvents=True),
-                ServiceStateVariable('volume_out','string',sendEvents=True)
+                ServiceStateVariable('volume_out','string',sendEvents=True),
+                ServiceStateVariable('muting','boolean',sendEvents=True)
                 
 
 	]
 	
 		
         volMan = VolumeManager()
+        calMan = CallManager()
 
 
 	
@@ -56,6 +62,11 @@ class VolumeManager(Service):
                 return {
                         'volume_out':self.volMan.getVolume()
                         }
+
+
+        @register_action('muteUnmuteMic')
+	def mute(self,arg):                
+                self.calMan.muteMic()
 
                 
 

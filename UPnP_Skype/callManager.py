@@ -3,49 +3,32 @@ import os
 
 
 class CallManager:
-    
 
-    def holdcall(self):
+
+    def __init__(self):
         if os.name == "nt":
-            skype = Skype4Py.Skype()
+            self.skype = Skype4Py.Skype()
         else:
-            skype = Skype4Py.Skype(Transport='x11')
+            self.skype = Skype4Py.Skype(Transport='x11')
         try:
-            skype.Attach()
+            self.skype.Attach()
         except Skype4Py.errors.SkypeAPIError:
             print "could not attach, are you logged in?"
-        calls = skype.ActiveCalls
-        for call in calls:
-            call.Hold()
 
-
-    def resumecall(self):
-        if os.name == "nt":
-            skype = Skype4Py.Skype()
-        else:
-            skype = Skype4Py.Skype(Transport='x11')
-        try:
-            skype.Attach()
-        except Skype4Py.errors.SkypeAPIError:
-            print "could not attach, are you logged in?"
-        calls = skype.ActiveCalls
+    def holdResumeCall(self):
+        calls = self.skype.ActiveCalls
         for call in calls:
-            call.Resume()
+            status = call._GetStatus()
+            if status == Skype4Py.clsOnHold or status == "LOCALHOLD":
+                call.Resume()
+            if call._GetStatus() == Skype4Py.clsInProgress:
+                call.Hold()
+
 
 
     def addFriend(self,nickname):
-        if os.name == "nt":
-            skype = Skype4Py.Skype()
-        else:
-            skype = Skype4Py.Skype(Transport='x11')
-        try:
-            skype.Attach()
-        except Skype4Py.errors.SkypeAPIError:
-            print "could not attach, are you logged in?"
         requestMessage = "Please accept my request!"
-        searchResults = skype.SearchForUsers(nickname)
-        print "tout lesdsofhsjhgfhkjsgdfjsss"
-        print searchResults
+        searchResults = self.skype.SearchForUsers(nickname)
         for res in searchResults:
             print res
             if res._GetHandle() == nickname:
@@ -53,57 +36,56 @@ class CallManager:
                 print "invite send to "+res._GetHandle()
 
 
+    def delFriend(self,nickname):
+        self.skype.User(nickname)._SetIsAuthorized(0)
+
+
+    def getAllFriend(self):
+        data = ""
+        for user in self.skype.Friends:
+            data+=user.Handle+";"
+        return data[:-1]
+
+
 
     def endCall(self):
-        if os.name == "nt":
-            skype = Skype4Py.Skype()
-        else:
-            skype = Skype4Py.Skype(Transport='x11')
-        try:
-            skype.Attach()
-        except Skype4Py.errors.SkypeAPIError:
-            print "could not attach, are you logged in?"
-        calls = skype.ActiveCalls
+        calls = self.skype.ActiveCalls
         for call in calls:
             call.Finish()
 
 
 
     def changeStatus(self):
-        if os.name == "nt":
-            skype = Skype4Py.Skype()
-        else:
-            skype = Skype4Py.Skype(Transport='x11')
-        try:
-            skype.Attach()
-        except Skype4Py.errors.SkypeAPIError:
-            print "could not attach, are you logged in?"
-        user = skype.User("genox212")
+        user = self.skype.User("genox212")
         skype._SetCurrentUserStatus(Skype4Py.cusAway)
 
 
 
-    def changeDisplayName(self,newNickname):
-        if os.name == "nt":
-            skype = Skype4Py.Skype()
+    def getStatus(self):
+        return self.skype._GetCurrentUserStatus()
+
+
+    def setStatus(self,arg):
+        if arg:
+            self.skype._SetCurrentUserStatus(Skype4Py.cusOnline)
         else:
-            skype = Skype4Py.Skype(Transport='x11')
-        try:
-            skype.Attach()
-        except Skype4Py.errors.SkypeAPIError:
-            print "could not attach, are you logged in?"
-        user1 = skype._GetCurrentUserProfile()
+            self.skype._SetCurrentUserStatus(Skype4Py.cusDoNotDisturb)
+
+
+
+    def changeDisplayName(self,newNickname):
+        user1 = self.skype._GetCurrentUserProfile()
         user1._SetFullName(newNickname)
+
+
+    def muteMic(self):
+        if len(self.skype.ActiveCalls) > 0:
+            if self.skype._GetMute():
+                self.skype._SetMute(False)
+            else:
+                self.skype._SetMute(True)
 
 
 
     def sendMessage(self,nickname,content):
-        if os.name == "nt":
-            skype = Skype4Py.Skype()
-        else:
-            skype = Skype4Py.Skype(Transport='x11')
-        try:
-            skype.Attach()
-        except Skype4Py.errors.SkypeAPIError:
-            print "could not attach, are you logged in?"
-        skype.SendMessage(nickname,content)
+        self.skype.SendMessage(nickname,content)

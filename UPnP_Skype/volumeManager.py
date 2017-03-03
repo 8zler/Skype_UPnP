@@ -9,3 +9,4 @@ class VolumeManager:
     def setVolume(self,value):
         data = int(value.split("Value:")[-1])
         os.system("amixer set 'Capture'"+" "+str(data)+"%")
+
